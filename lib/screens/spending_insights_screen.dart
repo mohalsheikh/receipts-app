@@ -1,4 +1,3 @@
-// lib/screens/spending_insights_screen.dart
 import 'dart:io';
 import 'dart:math';
 import 'package:collection/collection.dart';
@@ -23,7 +22,7 @@ class SpendingInsightsScreen extends StatefulWidget {
 }
 
 class _State extends State<SpendingInsightsScreen> {
-  final _shareKey = GlobalKey(); // 1. Key for the button
+  final _shareKey = GlobalKey();
   DateTime? _start, _end;
   List<Receipt> _list = [];
   bool _load = false;
@@ -89,11 +88,9 @@ class _State extends State<SpendingInsightsScreen> {
       ),
     );
 
-    // 2. Calculate position
     final box = _shareKey.currentContext?.findRenderObject() as RenderBox?;
     final rect = box != null ? box.localToGlobal(Offset.zero) & box.size : null;
 
-    // 3. Pass sharePositionOrigin
     await Share.shareXFiles([XFile(f.path)], sharePositionOrigin: rect);
   }
 
@@ -240,8 +237,9 @@ class _DailyChart extends StatelessWidget {
           ..sort((a, b) => a.key.compareTo(b.key));
     if (g.isEmpty) return const SizedBox();
     final maxV = g.map((e) => e.value).fold(0.0, max);
+
     return Container(
-      height: 150,
+      height: 180, // Increased height to accommodate text
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: c.surfaceContainer,
@@ -252,20 +250,42 @@ class _DailyChart extends StatelessWidget {
         children: g
             .map(
               (e) => Expanded(
-                child: Tooltip(
-                  message: '${DateFormat('MM/dd').format(e.key)}: \$${e.value}',
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 2),
-                    child: FractionallySizedBox(
-                      heightFactor: e.value / maxV,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: c.primary,
-                          borderRadius: BorderRadius.circular(4),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    // The Bar
+                    Expanded(
+                      child: Tooltip(
+                        message:
+                            '${DateFormat('MM/dd').format(e.key)}: \$${e.value.toStringAsFixed(2)}',
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 2),
+                          child: FractionallySizedBox(
+                            heightFactor: e.value / maxV,
+                            alignment: Alignment.bottomCenter,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: c.primary,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
+                    const SizedBox(height: 6),
+                    // The Date Label
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        DateFormat('M/d').format(e.key),
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: c.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             )

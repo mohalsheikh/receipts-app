@@ -1,3 +1,4 @@
+// lib/screens/home_screen.dart
 import 'package:flutter/material.dart';
 import '../models/receipt.dart';
 
@@ -117,6 +118,37 @@ class _HomeScreenState extends State<HomeScreen> {
       body: StreamBuilder<List<Receipt>>(
         stream: widget.receiptsStream,
         builder: (context, snap) {
+          // 1. CRITICAL FIX: Handle Errors (Missing Index)
+          if (snap.hasError) {
+            // This logs the link to create the index in your Debug Console
+            debugPrint("Firestore Query Error: ${snap.error}");
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.warning_amber_rounded, color: c.error, size: 48),
+                    const SizedBox(height: 16),
+                    Text(
+                      "Database Error",
+                      style: TextStyle(
+                        color: c.error,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      "This filter requires a Firestore Index.\nCheck your Debug Console for the link to create it.",
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
           final waiting =
               snap.connectionState == ConnectionState.waiting && !snap.hasData;
           final list = _sorted(snap.data ?? []);
