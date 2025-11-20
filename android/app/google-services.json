@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "339395447043",
+    "project_id": "receipt-app-58d4e",
+    "storage_bucket": "receipt-app-58d4e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:339395447043:android:fbd1bced03e8b0d44fc136",
+        "android_client_info": {
+          "package_name": "com.example.receipt_locker_flutter"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCBbfyD1wYXkTFHwH4C33v2ZvPOAvsVSRE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
