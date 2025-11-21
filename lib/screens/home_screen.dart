@@ -1,4 +1,3 @@
-// lib/screens/home_screen.dart
 import 'package:flutter/material.dart';
 import '../models/receipt.dart';
 
@@ -118,9 +117,7 @@ class _HomeScreenState extends State<HomeScreen> {
       body: StreamBuilder<List<Receipt>>(
         stream: widget.receiptsStream,
         builder: (context, snap) {
-          // 1. CRITICAL FIX: Handle Errors (Missing Index)
           if (snap.hasError) {
-            // This logs the link to create the index in your Debug Console
             debugPrint("Firestore Query Error: ${snap.error}");
             return Center(
               child: Padding(

@@ -1,13 +1,16 @@
+// lib/screens/ocr_review_screen.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/receipt.dart';
+import '../services/ocr_service.dart';
 
 class OCRReviewScreen extends StatefulWidget {
   final VoidCallback onBack;
   final void Function(Receipt) onSave;
   final String? imagePath;
   final Receipt? existing;
+
   const OCRReviewScreen({
     super.key,
     required this.onBack,
@@ -22,11 +25,18 @@ class OCRReviewScreen extends StatefulWidget {
 
 class _OCRReviewScreenState extends State<OCRReviewScreen> {
   final _form = GlobalKey<FormState>();
-  late final _store = TextEditingController(),
-      _total = TextEditingController(),
-      _cat = TextEditingController();
+
+  late final TextEditingController _store;
+  late final TextEditingController _total;
+  late final TextEditingController _cat;
+
+  late final ReceiptOcrService _ocrService;
+  bool _ocrRunning = false;
+  String? _ocrMessage;
+
   DateTime _date = DateTime.now();
   DateTime? _ret, _war;
+
   static const _cats = [
     'Groceries',
     'Dining',
@@ -43,6 +53,13 @@ class _OCRReviewScreenState extends State<OCRReviewScreen> {
   @override
   void initState() {
     super.initState();
+
+    _store = TextEditingController();
+    _total = TextEditingController();
+    _cat = TextEditingController();
+    _ocrService = ReceiptOcrService();
+
+    // Editing existing receipt → just preload its data.
     if (widget.existing != null) {
       final r = widget.existing!;
       _store.text = r.store;
@@ -51,14 +68,21 @@ class _OCRReviewScreenState extends State<OCRReviewScreen> {
       _date = r.date;
       _ret = r.returnBy;
       _war = r.warrantyEnds;
+    } else {
+      // New receipt → if we have an image, automatically run OCR.
+      final path = widget.imagePath;
+      if (path != null && path.isNotEmpty) {
+        _runOcr(path);
+      }
     }
   }
 
   @override
   void dispose() {
-    for (var c in [_store, _total, _cat]) {
-      c.dispose();
-    }
+    _store.dispose();
+    _total.dispose();
+    _cat.dispose();
+    _ocrService.dispose();
     super.dispose();
   }
 
@@ -72,8 +96,51 @@ class _OCRReviewScreenState extends State<OCRReviewScreen> {
     if (d != null) onSet(d);
   }
 
+  Future<void> _runOcr(String path) async {
+    setState(() {
+      _ocrRunning = true;
+      _ocrMessage = 'Scanning receipt…';
+    });
+
+    try {
+      final parsed = await _ocrService.parseImage(path);
+
+      if (!mounted) return;
+
+      setState(() {
+        // Only fill fields if user hasn't typed anything yet.
+        if (_store.text.trim().isEmpty && parsed.store != null) {
+          _store.text = parsed.store!;
+        }
+        if (_total.text.trim().isEmpty && parsed.total != null) {
+          _total.text = parsed.total!.toStringAsFixed(2);
+        }
+        if (parsed.date != null) {
+          _date = parsed.date!;
+        }
+        if (_cat.text.trim().isEmpty && parsed.categoryHint != null) {
+          _cat.text = parsed.categoryHint!;
+        }
+
+        _ocrMessage = 'Scanned with AI. Please double-check values.';
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _ocrMessage = 'Could not read text automatically.';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _ocrRunning = false;
+        });
+      }
+    }
+  }
+
   void _save() {
     if (!_form.currentState!.validate()) return;
+
     widget.onSave(
       Receipt(
         id:
@@ -135,8 +202,54 @@ class _OCRReviewScreenState extends State<OCRReviewScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 12),
             ],
+
+            // OCR status / info banner
+            if (_ocrMessage != null)
+              Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: c.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: c.outlineVariant.withOpacity(0.6)),
+                ),
+                child: Row(
+                  children: [
+                    if (_ocrRunning)
+                      SizedBox(
+                        height: 16,
+                        width: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: c.primary,
+                        ),
+                      )
+                    else
+                      Icon(Icons.auto_awesome, size: 18, color: c.secondary),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _ocrRunning ? 'Scanning receipt…' : _ocrMessage ?? '',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: c.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                    if (!_ocrRunning && widget.imagePath != null)
+                      TextButton(
+                        onPressed: () => _runOcr(widget.imagePath!),
+                        child: const Text('Rescan'),
+                      ),
+                  ],
+                ),
+              ),
+
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -157,7 +270,7 @@ class _OCRReviewScreenState extends State<OCRReviewScreen> {
                       fontWeight: FontWeight.bold,
                       color: c.primary,
                     ),
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                       prefixText: '\$ ',
                       border: InputBorder.none,
                       hintText: '0.00',
@@ -237,42 +350,44 @@ class _OCRReviewScreenState extends State<OCRReviewScreen> {
   }
 
   Widget _dateTile(
-    String l,
-    DateTime? d,
-    IconData i,
-    VoidCallback tap, {
+    String label,
+    DateTime? value,
+    IconData icon,
+    VoidCallback onTap, {
     VoidCallback? onClear,
   }) {
     final c = Theme.of(context).colorScheme;
     return InkWell(
-      onTap: tap,
+      onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: c.surfaceContainerLow,
           borderRadius: BorderRadius.circular(12),
-          border: d != null
+          border: value != null
               ? Border.all(color: c.primary.withOpacity(0.3))
               : null,
         ),
         child: Row(
           children: [
-            Icon(i, color: d != null ? c.primary : c.onSurfaceVariant),
+            Icon(icon, color: value != null ? c.primary : c.onSurfaceVariant),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    l,
+                    label,
                     style: TextStyle(fontSize: 11, color: c.onSurfaceVariant),
                   ),
                   Text(
-                    d == null ? 'Not set' : DateFormat.yMMMd().format(d),
+                    value == null
+                        ? 'Not set'
+                        : DateFormat.yMMMd().format(value),
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
-                      color: d != null
+                      color: value != null
                           ? c.onSurface
                           : c.onSurface.withOpacity(0.5),
                     ),
@@ -280,7 +395,7 @@ class _OCRReviewScreenState extends State<OCRReviewScreen> {
                 ],
               ),
             ),
-            if (d != null && onClear != null)
+            if (value != null && onClear != null)
               IconButton(
                 icon: const Icon(Icons.close, size: 18),
                 onPressed: onClear,
