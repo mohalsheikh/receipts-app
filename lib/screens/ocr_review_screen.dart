@@ -1,4 +1,3 @@
-// lib/screens/ocr_review_screen.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -59,7 +58,6 @@ class _OCRReviewScreenState extends State<OCRReviewScreen> {
     _cat = TextEditingController();
     _ocrService = ReceiptOcrService();
 
-    // Editing existing receipt → just preload its data.
     if (widget.existing != null) {
       final r = widget.existing!;
       _store.text = r.store;
@@ -69,7 +67,6 @@ class _OCRReviewScreenState extends State<OCRReviewScreen> {
       _ret = r.returnBy;
       _war = r.warrantyEnds;
     } else {
-      // New receipt → if we have an image, automatically run OCR.
       final path = widget.imagePath;
       if (path != null && path.isNotEmpty) {
         _runOcr(path);
@@ -138,6 +135,17 @@ class _OCRReviewScreenState extends State<OCRReviewScreen> {
     }
   }
 
+  void _openImageViewer() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => _ReceiptImageViewer(
+          imagePath: widget.imagePath,
+          imageUrl: widget.existing?.imageUrl,
+        ),
+      ),
+    );
+  }
+
   void _save() {
     if (!_form.currentState!.validate()) return;
 
@@ -188,24 +196,73 @@ class _OCRReviewScreenState extends State<OCRReviewScreen> {
           children: [
             if (hasImg) ...[
               Center(
-                child: SizedBox(
-                  height: 160,
-                  width: 120,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: widget.imagePath != null
-                        ? Image.file(File(widget.imagePath!), fit: BoxFit.cover)
-                        : Image.network(
-                            widget.existing!.imageUrl!,
-                            fit: BoxFit.cover,
+                child: GestureDetector(
+                  onTap: _openImageViewer,
+                  child: Hero(
+                    tag: 'receipt_image',
+                    child: Container(
+                      height: 160,
+                      width: 120,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
                           ),
+                        ],
+                      ),
+                      child: Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: widget.imagePath != null
+                                ? Image.file(
+                                    File(widget.imagePath!),
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                    height: double.infinity,
+                                  )
+                                : Image.network(
+                                    widget.existing!.imageUrl!,
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                    height: double.infinity,
+                                  ),
+                          ),
+                          Positioned(
+                            bottom: 4,
+                            right: 4,
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.6),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(
+                                Icons.zoom_in,
+                                color: Colors.white,
+                                size: 16,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Center(
+                child: Text(
+                  'Tap to view full image',
+                  style: TextStyle(fontSize: 12, color: c.onSurfaceVariant),
                 ),
               ),
               const SizedBox(height: 12),
             ],
 
-            // OCR status / info banner
             if (_ocrMessage != null)
               Container(
                 margin: const EdgeInsets.only(bottom: 16),
@@ -403,6 +460,75 @@ class _OCRReviewScreenState extends State<OCRReviewScreen> {
             else
               const Icon(Icons.chevron_right, size: 18),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ReceiptImageViewer extends StatefulWidget {
+  final String? imagePath;
+  final String? imageUrl;
+
+  const _ReceiptImageViewer({this.imagePath, this.imageUrl});
+
+  @override
+  State<_ReceiptImageViewer> createState() => _ReceiptImageViewerState();
+}
+
+class _ReceiptImageViewerState extends State<_ReceiptImageViewer> {
+  final TransformationController _transformationController =
+      TransformationController();
+  TapDownDetails? _doubleTapDetails;
+
+  @override
+  void dispose() {
+    _transformationController.dispose();
+    super.dispose();
+  }
+
+  void _handleDoubleTapDown(TapDownDetails details) {
+    _doubleTapDetails = details;
+  }
+
+  void _handleDoubleTap() {
+    if (_transformationController.value != Matrix4.identity()) {
+      _transformationController.value = Matrix4.identity();
+    } else {
+      final position = _doubleTapDetails!.localPosition;
+      _transformationController.value = Matrix4.identity()
+        ..translate(-position.dx, -position.dy)
+        ..scale(2.0);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        iconTheme: const IconThemeData(color: Colors.white),
+        title: const Text(
+          'Receipt Image',
+          style: TextStyle(color: Colors.white),
+        ),
+      ),
+      body: GestureDetector(
+        onDoubleTapDown: _handleDoubleTapDown,
+        onDoubleTap: _handleDoubleTap,
+        child: Center(
+          child: InteractiveViewer(
+            transformationController: _transformationController,
+            minScale: 0.5,
+            maxScale: 4.0,
+            child: Hero(
+              tag: 'receipt_image',
+              child: widget.imagePath != null
+                  ? Image.file(File(widget.imagePath!), fit: BoxFit.contain)
+                  : Image.network(widget.imageUrl!, fit: BoxFit.contain),
+            ),
+          ),
         ),
       ),
     );

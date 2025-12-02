@@ -134,99 +134,100 @@ class _AddReceiptScreenState extends State<AddReceiptScreen>
         children: [
           CameraPreview(_ctrl!),
           CustomPaint(painter: _OverlayPainter()),
-          SafeArea(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      IconButton(
-                        icon: const Icon(
-                          Icons.close,
-                          color: Colors.white,
-                          size: 28,
-                        ),
-                        onPressed: widget.onBack,
+          Align(
+            alignment: Alignment.topCenter,
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    IconButton(
+                      icon: const Icon(
+                        Icons.close,
+                        color: Colors.white,
+                        size: 28,
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.black54,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Text(
-                          'Align receipt',
-                          style: TextStyle(color: Colors.white),
-                        ),
+                      onPressed: widget.onBack,
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
                       ),
-                      IconButton(
-                        icon: Icon(
-                          _flash == FlashMode.off
-                              ? Icons.flash_off
-                              : Icons.flash_on,
-                          color: Colors.white,
-                        ),
-                        onPressed: () {
-                          try {
-                            final n = _flash == FlashMode.off
-                                ? FlashMode.torch
-                                : FlashMode.off;
-                            _ctrl!.setFlashMode(n);
-                            setState(() => _flash = n);
-                          } catch (_) {}
-                        },
+                      decoration: BoxDecoration(
+                        color: Colors.black54,
+                        borderRadius: BorderRadius.circular(20),
                       ),
-                    ],
-                  ),
+                      child: const Text(
+                        'Align receipt',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(
+                        _flash == FlashMode.off
+                            ? Icons.flash_off
+                            : Icons.flash_on,
+                        color: Colors.white,
+                      ),
+                      onPressed: () {
+                        try {
+                          final n = _flash == FlashMode.off
+                              ? FlashMode.torch
+                              : FlashMode.off;
+                          _ctrl!.setFlashMode(n);
+                          setState(() => _flash = n);
+                        } catch (_) {}
+                      },
+                    ),
+                  ],
                 ),
-                Container(
-                  color: Colors.black54,
-                  padding: const EdgeInsets.fromLTRB(32, 30, 32, 50),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      IconButton(
-                        onPressed: () async {
-                          final x = await ImagePicker().pickImage(
-                            source: ImageSource.gallery,
-                          );
-                          if (x != null) widget.onCaptured(x.path);
-                        },
-                        icon: const Icon(
-                          Icons.photo_library,
-                          color: Colors.white,
-                          size: 32,
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: _snap,
-                        child: Container(
-                          height: 80,
-                          width: 80,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 5),
-                          ),
-                          child: Container(
-                            margin: const EdgeInsets.all(4),
-                            decoration: const BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 48),
-                    ],
+              ),
+            ),
+          ),
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: Container(
+              color: Colors.black54,
+              padding: const EdgeInsets.fromLTRB(32, 30, 32, 50),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  IconButton(
+                    onPressed: () async {
+                      final x = await ImagePicker().pickImage(
+                        source: ImageSource.gallery,
+                      );
+                      if (x != null) widget.onCaptured(x.path);
+                    },
+                    icon: const Icon(
+                      Icons.photo_library,
+                      color: Colors.white,
+                      size: 32,
+                    ),
                   ),
-                ),
-              ],
+                  GestureDetector(
+                    onTap: _snap,
+                    child: Container(
+                      height: 80,
+                      width: 80,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 5),
+                      ),
+                      child: Container(
+                        margin: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 48),
+                ],
+              ),
             ),
           ),
         ],
